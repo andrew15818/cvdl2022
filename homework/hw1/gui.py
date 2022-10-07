@@ -1,9 +1,13 @@
 import sys
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QPushButton, QDialog
+from PyQt5.QtWidgets import (
+    QGroupBox, QHBoxLayout, 
+    QVBoxLayout, QPushButton, 
+    QDialog, QWidget,
+    QMainWindow, QFrame)
 
 # Subclass this layout to add layouts
-class GUI(QDialog):
+class GUI(QMainWindow):
     def __init__(self, size=(500,500)):
         self.app = QtWidgets.QApplication(sys.argv)
         super(GUI, self).__init__()
@@ -12,12 +16,10 @@ class GUI(QDialog):
         self.size = size
         #self.window = None
 
-        self.mainLayout = QGroupBox()
-        #
         # Create Window and Layouts, widgets
         self.start_window()
         self.create_widgets()
-        
+        self.show() 
     def start_window(self):
         return self._get_window()
 
@@ -29,29 +31,27 @@ class GUI(QDialog):
         return self.window
     
     def create_widgets(self):
-        # Layout for loading files and two images individually
-        self.leftLayout = QVBoxLayout()
-        self.loadFolderBtn = QPushButton('Load Folder', self)
-        self.loadFolderBtn.clicked.connect(self.load_folder)
+        self.mainFrame = QtWidgets.QFrame(self)
+        self.mainFrame.setStyleSheet('background-color: rgba(150, 0, 0, 1);')
+        self.setCentralWidget(self.mainFrame)
+        self.leftLayout = QtWidgets.QVBoxLayout(self.mainFrame)
 
-        self.loadLImageBtn = QPushButton('Load L Image', self)
-        self.loadLImageBtn.clicked.connect(self.load_image)
-
-        self.loadRImageBtn= QPushButton('Load R Image', self)
-        self.loadRImageBtn.clicked.connect(self.load_image)
-
-        self.leftLayout.addWidget(self.loadFolderBtn)
-        self.leftLayout.addWidget(self.loadLImageBtn)
-        self.leftLayout.addWidget(self.loadRImageBtn)
-
-        self.mainLayout.setLayout(self.leftLayout)
+        loadFolderFrame = QtWidgets.QFrame(self.mainFrame)
+        self.leftLayout.addWidget(loadFolderFrame)
+        loadFolderLayout = QtWidgets.QHBoxLayout(loadFolderFrame)
+       
+        loadFolderBtn = QtWidgets.QPushButton('Load Folder', loadFolderFrame) 
+        loadFolderLayout.addWidget(loadFolderBtn)
     def show(self):
         self.window.show()
 
     def load_image(self):
+        print('Loaded image')
         pass
     def load_folder(self):
+        print('Loaded folder')
         pass
+
 
 gui = GUI()
 gui.show()
