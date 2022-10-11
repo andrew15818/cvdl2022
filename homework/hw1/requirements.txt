@@ -1,0 +1,6 @@
+pyqt5
+qtgui
+opencv
+
+# for conda, `conda install -c rogerramos qtgui`
+#

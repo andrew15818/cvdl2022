@@ -1,74 +1,14 @@
 import sys
+import methods
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import (
+    QApplication,
     QGroupBox, QHBoxLayout, 
     QVBoxLayout, QPushButton, 
     QDialog, QWidget,
-    QMainWindow, QFrame)
-
-# Subclass this layout to add layouts
-class GUI(QMainWindow):
-    def __init__(self, size=(500,500)):
-        self.app = QtWidgets.QApplication(sys.argv)
-        super(GUI, self).__init__()
-        
-        
-        self.size = size
-        #self.window = None
-
-<<<<<<< HEAD
-        self.mainLayout = QHBoxLayout()
-        #
-        # Create Window and Layouts, widgets
-        self.start_window()
-        self.create_widgets()
-        self.mainLayout.addWidget(self.groupBox) 
-        self.setLayout(self.mainLayout)
-        print(self.children())
-
-=======
-        # Create Window and Layouts, widgets
-        self.start_window()
-        self.create_widgets()
-        self.show() 
->>>>>>> 17845a8c942bcddbc4bc8a2ce373b8dd07948ae9
-    def start_window(self):
-        return self._get_window()
-
-    def _get_window(self):
-        self.window = QtWidgets.QWidget()
-        self.window.setWindowTitle('P76107116 Camera Calibration :3')
-        self.window.resize(self.size[0], self.size[1])
-            
-        return self.window
-    
-    def create_widgets(self):
-        # Layout for loading files and two images individually
-        self.groupBox = QGroupBox("Files")
-        self.leftLayout = QVBoxLayout()
-        self.loadFolderBtn = QPushButton('Load Folder', self)
-        self.loadFolderBtn.clicked.connect(self.load_folder)
-
-        self.loadLImageBtn = QPushButton('Load L Image', self)
-        self.loadLImageBtn.clicked.connect(self.load_image)
-
-        self.loadRImageBtn= QPushButton('Load R Image', self)
-        self.loadRImageBtn.clicked.connect(self.load_image)
-
-        self.leftLayout.addWidget(self.loadFolderBtn)
-        self.leftLayout.addWidget(self.loadLImageBtn)
-        self.leftLayout.addWidget(self.loadRImageBtn)
-
-        self.groupBox.setLayout(self.leftLayout)
-    def show(self):
-        self.window.show()
-
-    def load_image(self):
-        print('Loaded image')
-        pass
-    def load_folder(self):
-        print('Loaded folder')
-        pass
+    QMainWindow, QFrame,
+    QFileDialog)
+from PyQt5.QtCore import pyqtSlot
 
 class App(QDialog):
 
@@ -85,42 +25,75 @@ class App(QDialog):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         
-        self.createHorizontalLayout()
+        self.createHorizontalLayouts()
         
-        windowLayout = QVBoxLayout()
+        windowLayout = QHBoxLayout()
         windowLayout.addWidget(self.horizontalGroupBox)
+        windowLayout.addWidget(self.calibrationBox)
         self.setLayout(windowLayout)
         
         self.show()
     
-    def createHorizontalLayout(self):
-        self.horizontalGroupBox = QGroupBox("Files")
+    def createHorizontalLayouts(self):
+        # Upload files
+        self.horizontalGroupBox = QGroupBox("Load Images")
         layout = QVBoxLayout()
         
-        buttonBlue = QPushButton('Load Folder', self)
-        buttonBlue.clicked.connect(self.load_folder)
-        layout.addWidget(buttonBlue)
+        loadFolderBtn = QPushButton('Load Folder', self)
+        loadFolderBtn.clicked.connect(self.load_folder)
+        layout.addWidget(loadFolderBtn)
         
-        buttonRed = QPushButton('Load L Image', self)
-        buttonRed.clicked.connect(self.load_image)
-        layout.addWidget(buttonRed)
+        loadLImageBtn = QPushButton('Load L Image', self)
+        loadLImageBtn.clicked.connect(self.load_image)
+        layout.addWidget(loadLImageBtn)
         
-        buttonGreen = QPushButton('Load R Image', self)
-        buttonGreen.clicked.connect(self.load_image)
-        layout.addWidget(buttonGreen)
-        
+        loadRImageBtn = QPushButton('Load R Image', self)
+        loadRImageBtn.clicked.connect(self.load_image)
+        layout.addWidget(loadRImageBtn)
+
         self.horizontalGroupBox.setLayout(layout)
-    
+
+        # Calibration Section
+        self.calibrationBox = QGroupBox('1. Calibration')
+        calLayout = QVBoxLayout()
+
+        calBtn = QPushButton('1.1 Find Corners', self)
+        calBtn.clicked.connect(self.find_corners)
+        calLayout.addWidget(calBtn)
+
+        intBtn = QPushButton('1.2 Find Intrinsic', self)
+        intBtn.clicked.connect(self.find_intrinsic_matrix)
+        calLayout.addWidget(intBtn)
+
+        self.calibrationBox.setLayout(calLayout)
+       
     @pyqtSlot()
-    def on_click(self):
-        print('PyQt5 button click')
-
     def load_folder(self):
+        dir_ = QFileDialog.getExistingDirectory(None, 'Select a folder', './', QFileDialog.ShowDirsOnly)
+        print(dir_)
+        if dir_ == '':
+            print('Choose a folder before advancing!')
+            return
         print('Loading folder')
-    def load_image(self):
-        print('Loading image')
- 
 
-gui = GUI()
-gui.show()
-sys.exit(gui.app.exec_())
+    @pyqtSlot()
+    def load_image(self):
+        img = QFileDialog.getOpenFileName(None, 
+            'Select an image', './', 
+            "Images (*.bmp *.png *jpg)")
+        if img == None:
+            print('Choose an image!')
+            return 
+        print('Loading image')
+
+    @pyqtSlot()
+    def find_corners(self):
+        print('Finding corners in image...')
+ 
+    @pyqtSlot()
+    def find_intrinsic_matrix(self):
+        print('Finding intrinsice matrix...')
+
+app = QApplication(sys.argv)
+gui = App()
+sys.exit(app.exec_())
