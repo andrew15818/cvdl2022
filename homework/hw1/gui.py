@@ -74,6 +74,8 @@ class App(QDialog):
         if dir_ == '':
             print('Choose a folder before advancing!')
             return
+
+        methods.find_chessboard_corners_dir(dir_)
         print('Loading folder')
 
     @pyqtSlot()
@@ -84,6 +86,7 @@ class App(QDialog):
         if img == None:
             print('Choose an image!')
             return 
+        
         print('Loading image')
 
     @pyqtSlot()
