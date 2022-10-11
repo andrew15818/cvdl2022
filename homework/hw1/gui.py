@@ -1,9 +1,13 @@
 import sys
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QPushButton, QDialog
+from PyQt5.QtWidgets import (
+    QGroupBox, QHBoxLayout, 
+    QVBoxLayout, QPushButton, 
+    QDialog, QWidget,
+    QMainWindow, QFrame)
 
 # Subclass this layout to add layouts
-class GUI(QDialog):
+class GUI(QMainWindow):
     def __init__(self, size=(500,500)):
         self.app = QtWidgets.QApplication(sys.argv)
         super(GUI, self).__init__()
@@ -12,6 +16,7 @@ class GUI(QDialog):
         self.size = size
         #self.window = None
 
+<<<<<<< HEAD
         self.mainLayout = QHBoxLayout()
         #
         # Create Window and Layouts, widgets
@@ -21,6 +26,12 @@ class GUI(QDialog):
         self.setLayout(self.mainLayout)
         print(self.children())
 
+=======
+        # Create Window and Layouts, widgets
+        self.start_window()
+        self.create_widgets()
+        self.show() 
+>>>>>>> 17845a8c942bcddbc4bc8a2ce373b8dd07948ae9
     def start_window(self):
         return self._get_window()
 
@@ -53,8 +64,10 @@ class GUI(QDialog):
         self.window.show()
 
     def load_image(self):
+        print('Loaded image')
         pass
     def load_folder(self):
+        print('Loaded folder')
         pass
 
 class App(QDialog):
@@ -107,6 +120,7 @@ class App(QDialog):
     def load_image(self):
         print('Loading image')
  
+
 gui = GUI()
 gui.show()
 sys.exit(gui.app.exec_())
