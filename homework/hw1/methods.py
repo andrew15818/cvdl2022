@@ -10,6 +10,7 @@ class Calibration():
         self.patternSize = patternSize
         self.corners, self.imgs = [], []
         self.boardSize = self.patternSize[0] * self.patternSize[1]
+        self.path = ''
 
     # If reading from entire dir, 
     # find corners and show image for 0.5 seconds
@@ -17,7 +18,7 @@ class Calibration():
         # To smoothly display the images, try collecting 
         # them all first then displaying
        
-        
+        self.path = path 
         self.successes = 0
         # Loop through images in dir
         for image in os.listdir(path):
@@ -57,4 +58,9 @@ class Calibration():
                 cv2.calibrateCamera(objPoints, self.corners, self.imgSize, None, None)
 
         print(f'Intrinsic Matrix:\n{self.intrMat}')
+
+    def find_extrinsic_matrix(self, index):
+        objPoints = np.zeros((1, self.boardSize, 3), np.float32)
+
+        objPoints[0,:,:2] = np.mgrid[0:self.patternSize[0], 0:self.patternSize[1]].T.reshape(-1, 2)
 

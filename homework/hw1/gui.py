@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QPushButton, 
     QDialog, QWidget,
     QMainWindow, QFrame,
-    QFileDialog)
+    QFileDialog, QComboBox, QLabel)
 from PyQt5.QtCore import pyqtSlot
 
 class App(QDialog):
@@ -22,6 +22,7 @@ class App(QDialog):
         self.initUI()
         
         self.intrinsic = None
+        self.extrinsic_image = None
 
         # Good practice to have model class in view?
         self.cal = Calibration()
@@ -69,8 +70,33 @@ class App(QDialog):
         intBtn.clicked.connect(self.find_intrinsic_matrix)
         calLayout.addWidget(intBtn)
 
+        # Extrinsic box within calibration section
+        self.extrinsicBox = QGroupBox('1.3 Extrinsic')
+        extLayout = QVBoxLayout()
+        
+        # Figure out how to make label look good
+        #label = QLabel()
+        #label.setText('Find Extrinsic')
+        #label.setMargin(1)
+        #extLayout.addWidget(label)
+        
+        qCombo = QComboBox()
+        qCombo.addItems([str(i) for i in range(1, 16)])
+        qCombo.currentIndexChanged.connect(self.set_extrinsic_image)
+        extLayout.addWidget(qCombo)
+
+        extBtn = QPushButton('Find Extrinsic', self)
+        extBtn.clicked.connect(self.find_extrinsic_matrix)
+        extLayout.addWidget(extBtn)
+
+        calLayout.addLayout(extLayout) 
+
+        # Set the main layout
         self.calibrationBox.setLayout(calLayout)
-       
+        
+    def set_extrinsic_image(self, i):
+        self.extrinsic_image = i + 1
+
     @pyqtSlot()
     def load_folder(self):
         self.dir_ = QFileDialog.getExistingDirectory(None, 'Select a folder', './', QFileDialog.ShowDirsOnly)
@@ -106,6 +132,15 @@ class App(QDialog):
     def find_intrinsic_matrix(self):
         print('Finding intrinsice matrix...')
         self.cal.find_intrinsic_matrix()
+
+    @pyqtSlot()
+    def find_extrinsic_matrix(self):
+        if self.extrinsic_image == None:
+            print('You need to choose an image first!')
+            return
+
+        self.cal.find_extrinsic_matrix(self.extrinsic_image) 
+
 
 app = QApplication(sys.argv)
 gui = App()
