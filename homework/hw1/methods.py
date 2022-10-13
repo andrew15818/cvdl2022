@@ -32,10 +32,13 @@ class Calibration():
                                                self.patternSize,
                                                corners,
                                                found)
+            
             self.successes += 1
             self.corners.append(corners)
-            self.imgSize = img.shape[:-1]
+            self.imgSize = img.shape[::-1]
+
             # display the image
+            # TODO: Uncomment this for demo
             #cv2.imshow(f'{image}', filled)
             #cv2.waitKey(500)
             #cv2.destroyAllWindows()
@@ -43,19 +46,15 @@ class Calibration():
     def find_intrinsic_matrix(self):
         # Take the corners we found and convert them to 
         # correct format for camera calibration
-        imgPoints = np.zeros((self.successes * self.boardSize, 2))
-        objPoints = np.zeros((self.successes * self.boardSize, 3))
-        
-        print(self.corners[0][0][0])
-        for curr in range(self.successes):
-            step = curr * self.boardSize
-            i, j = step, 0
-            for j in range(self.boardSize):
-                imgPoints[i,0] = self.corners[0][j][0][0]
-                imgPoints[i,1] = self.corners[0][j][0][1]
-                objPoints[i,0] = j / self.patternSize[1]
-                objPoints[i,1] = j % self.patternSize[1]
-                objPoints[i,2] = 0
+        imgPoints = np.zeros((self.successes * self.boardSize, 2), np.float32)
+        objPoints = np.zeros((self.successes , self.boardSize, 3), np.float32)
 
-        ret, mtx, dist, rvects, tvecs = \
-                cv2.calibrateCamera(objPoints, imgPoints, (2048, 2048), None, None)
+        objPoints[:,:,:2] = np.mgrid[0:self.patternSize[0], 0:self.patternSize[1]].T.reshape(-1, 2)
+        
+        # Returns: intrinsic matrix, distortion coefficients,
+        # rotation & translation vectors from 3d-2d
+        ret, self.intrMat, self.distCoeff, self.rotVec, self.transVec= \
+                cv2.calibrateCamera(objPoints, self.corners, self.imgSize, None, None)
+
+        print(f'Intrinsic Matrix:\n{self.intrMat}')
+
