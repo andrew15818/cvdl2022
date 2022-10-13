@@ -1,5 +1,5 @@
 import sys
-import methods
+from methods import Calibration
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import (
     QApplication,
@@ -20,7 +20,11 @@ class App(QDialog):
         self.width = 500 
         self.height = 500
         self.initUI()
-    
+        
+        self.intrinsic = None
+
+        # Good practice to have model class in view?
+        self.cal = Calibration()
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -69,14 +73,12 @@ class App(QDialog):
        
     @pyqtSlot()
     def load_folder(self):
-        dir_ = QFileDialog.getExistingDirectory(None, 'Select a folder', './', QFileDialog.ShowDirsOnly)
-        print(dir_)
-        if dir_ == '':
+        self.dir_ = QFileDialog.getExistingDirectory(None, 'Select a folder', './', QFileDialog.ShowDirsOnly)
+        print(f'Loading {self.dir_}')
+
+        if self.dir_ == '':
             print('Choose a folder before advancing!')
             return
-
-        methods.find_chessboard_corners_dir(dir_)
-        print('Loading folder')
 
     @pyqtSlot()
     def load_image(self):
@@ -92,10 +94,18 @@ class App(QDialog):
     @pyqtSlot()
     def find_corners(self):
         print('Finding corners in image...')
+
+        if not self.dir_:
+            print('You have to choose a directory first!')
+            return
+
+        self.cal.find_chessboard_corners_dir(self.dir_)
+        print('Done')
  
     @pyqtSlot()
     def find_intrinsic_matrix(self):
         print('Finding intrinsice matrix...')
+        self.cal.find_intrinsic_matrix()
 
 app = QApplication(sys.argv)
 gui = App()
