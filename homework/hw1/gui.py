@@ -85,11 +85,19 @@ class App(QDialog):
         qCombo.currentIndexChanged.connect(self.set_extrinsic_image)
         extLayout.addWidget(qCombo)
 
-        extBtn = QPushButton('Find Extrinsic', self)
+        extBtn = QPushButton('1.3 Find Extrinsic', self)
         extBtn.clicked.connect(self.find_extrinsic_matrix)
         extLayout.addWidget(extBtn)
-
         calLayout.addLayout(extLayout) 
+        
+        distBtn = QPushButton('1.4 Show Distortion', self)
+        distBtn.clicked.connect(self.show_distortion)
+        calLayout.addWidget(distBtn)
+
+        undistBtn = QPushButton('1.5 Show Result', self)
+        undistBtn.clicked.connect(self.show_undistorted)
+        calLayout.addWidget(undistBtn)
+        
 
         # Set the main layout
         self.calibrationBox.setLayout(calLayout)
@@ -141,7 +149,17 @@ class App(QDialog):
 
         self.cal.find_extrinsic_matrix(self.extrinsic_image) 
 
+    @pyqtSlot()
+    def show_distortion(self):
+        self.cal.show_distortion()
 
+    @pyqtSlot()
+    def show_undistorted(self):
+        if self.extrinsic_image == None:
+            print('You need to choose an image first!')
+            return
+        self.cal.show_undistorted(self.extrinsic_image)
+            
 app = QApplication(sys.argv)
 gui = App()
 sys.exit(app.exec_())

@@ -54,13 +54,37 @@ class Calibration():
         
         # Returns: intrinsic matrix, distortion coefficients,
         # rotation & translation vectors from 3d-2d
-        ret, self.intrMat, self.distCoeff, self.rotVec, self.transVec= \
+        ret, self.intrMat, self.distCoeff, self.rotVec, self.transVec = \
                 cv2.calibrateCamera(objPoints, self.corners, self.imgSize, None, None)
-
+        
         print(f'Intrinsic Matrix:\n{self.intrMat}')
 
+    # TODO: Correct extrinsic estimation?
+    # Make it so that we can find extrinsic matrix for image w/o first finding corners?
     def find_extrinsic_matrix(self, index):
         objPoints = np.zeros((1, self.boardSize, 3), np.float32)
 
         objPoints[0,:,:2] = np.mgrid[0:self.patternSize[0], 0:self.patternSize[1]].T.reshape(-1, 2)
+        retval, rvec, tvec = \
+                cv2.solvePnP(objPoints, self.corners[index], self.intrMat, self.distCoeff, np.array(self.rotVec), np.array(self.transVec), useExtrinsicGuess=False)
+        ext, jacobian = cv2.Rodrigues(rvec)
+        ext = np.append(ext, tvec, axis=1)
+        print(f'Extrinsic matrix:\n{ext}')
 
+    def show_distortion(self):
+        print(self.distCoeff)
+
+    def show_undistorted(self, index):
+        # Open the image
+        img = cv2.imread(os.path.join(self.path, f'{index}.bmp'), 
+                         cv2.IMREAD_GRAYSCALE)
+        
+        h, w = img.shape
+        newmtx, roi = cv2.getOptimalNewCameraMatrix(self.intrMat, self.distCoeff, (w, h), 1, (w,h) )
+        undist = cv2.undistort(img, self.intrMat, self.distCoeff, newmtx)
+
+        cv2.imshow('Distorted eww...', img) 
+        cv2.waitKey(0)
+        cv2.imshow('Undistorted yay!', undist)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
