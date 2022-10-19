@@ -1,7 +1,8 @@
 import os
 import time
 import cv2
-import matplotlib
+#import cv2.cv as cv
+import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -14,14 +15,17 @@ class Calibration():
 
     # If reading from entire dir, 
     # find corners and show image for 0.5 seconds
-    def find_chessboard_corners_dir(self, path):
+    def find_chessboard_corners_dir(self, path, show=True):
         # To smoothly display the images, try collecting 
         # them all first then displaying
        
         self.path = path 
         self.successes = 0
+
         # Loop through images in dir
         for image in os.listdir(path):
+            if not image.endswith('.bmp'):
+                continue
             # Join dir path w/ filename and open it
             full_path = os.path.join(path, image)
             img = cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
@@ -40,9 +44,11 @@ class Calibration():
 
             # display the image
             # TODO: Uncomment this for demo
-            #cv2.imshow(f'{image}', filled)
-            #cv2.waitKey(500)
-            #cv2.destroyAllWindows()
+            if show:
+                #cv2.imshow(f'{image}', filled)
+                #cv2.waitKey(500)
+                cv2.destroyAllWindows()
+        return self.corners
 
     def find_intrinsic_matrix(self):
         # Take the corners we found and convert them to 
@@ -51,12 +57,11 @@ class Calibration():
         objPoints = np.zeros((self.successes , self.boardSize, 3), np.float32)
 
         objPoints[:,:,:2] = np.mgrid[0:self.patternSize[0], 0:self.patternSize[1]].T.reshape(-1, 2)
-        
+        print(f'objPoints for intrinsic matrix: {objPoints.shape}') 
         # Returns: intrinsic matrix, distortion coefficients,
         # rotation & translation vectors from 3d-2d
         ret, self.intrMat, self.distCoeff, self.rotVec, self.transVec = \
                 cv2.calibrateCamera(objPoints, self.corners, self.imgSize, None, None)
-        
         print(f'Intrinsic Matrix:\n{self.intrMat}')
 
     # TODO: Correct extrinsic estimation?
@@ -88,3 +93,119 @@ class Calibration():
         cv2.imshow('Undistorted yay!', undist)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+
+class Projection():
+    def __init__(self, onProjPath='Dataset_CvDl_Hw1/Q2_Image/Q2_lib/alphabet_lib_onboard.txt', 
+                 vertProjPath='Dataset_CvDl_Hw1/Q2_Image/Q2_lib/alphabet_lib_vertical.txt'):
+        self.onProjPath = onProjPath
+        self.vertProjPath = vertProjPath
+
+        self.read_proj_files()
+        # First projection part requries calibration
+        # Create our own object instead of passing from GUI
+        self.cal = Calibration() 
+
+    def read_proj_files(self):
+        self.onProjMat = cv2.FileStorage(self.onProjPath, cv2.FILE_STORAGE_READ)
+        self.vertProjMat = cv2.FileStorage(self.vertProjPath, cv2.FILE_STORAGE_READ)
+
+    # Each letter has its coordinates for the lines, 
+    # Should append all of them together into a single arr
+    def gen_word_obj_points(self, word, vert=False):
+        objPoints = []
+        for letter in word:
+            letter = letter.upper()
+            if vert:
+                objPoints.append(self.vertProjMat.getNode(letter).mat())
+            else:
+                objPoints.append(self.onProjMat.getNode(letter).mat())
+        return np.array(objPoints)
+     
+    # Have to calibrate before projecting
+    def project_on_board(self, imgPath, projectionText):
+        corners = self.cal.find_chessboard_corners_dir(imgPath, show=False)
+
+        objPoints = self.gen_word_obj_points(projectionText)
+        #objPoints = objPoints.T.reshape(-1,3)
+        self.cal.find_intrinsic_matrix()
+        print(objPoints.shape, objPoints)
+        
+        
+        r = np.array(self.cal.rotVec)
+        rotMat, ext = cv2.Rodrigues(r)
+        imgPoints, jacobian = cv2.projectPoints(objPoints,
+                                                rotMat,
+                                                np.array(self.cal.transVec),
+                                                self.cal.intrMat, 
+                                                self.cal.distCoeff)
+
+class Stereo():
+    def __init__(self):
+        pass
+    def get_disparity(self, leftImg, rightImg):
+        self.leftImg = leftImg
+        self.rightImg = rightImg
+
+        focalLength = 4019.284
+        baseline = 342.789
+        # Read the images, might have to turn to greyscale
+        left = cv2.imread(leftImg, 0)
+        right = cv2.imread(rightImg, 0)
+
+        print(f' Left image shape: {left.shape}')
+
+        c, r = left.shape
+
+        #sbm = cv2.createStereoBMState()
+        stereo = cv2.StereoBM_create(numDisparities=512, blockSize=5)
+        #disparity = cv2.cv.createMat(c, r,)
+        #left = cv2.fromarray(left)
+        #right = cv2.fromarray(right)
+
+        # Get the absolute value so its positive
+        self.disparity = np.abs(stereo.compute(left, right)).astype(np.float32)
+
+        self.disparity *= (255/ (self.disparity.max() ) )
+        self.depth = focalLength * baseline / (self.disparity+.001)
+
+       
+        cv2.imshow('Hello', self.depth)
+        cv2.waitKey(0)
+        return self.disparity
+
+    def get_mouse_coords(self, event, x, y, flags, params):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            cv2.circle(self.left, (x, y), 10, (255, 0, 0), 10)
+            self.mousex = x
+            self.mousey = y
+            print(self.mousex, self.mousey)
+
+    def find_corresponding_point(self, ):
+        self.left = cv2.imread(self.leftImg)
+        self.right = cv2.imread(self.rightImg)
+
+        self.left_gray = cv2.cvtColor(self.left, cv2.COLOR_BGR2GRAY)
+        self.right_gray = cv2.cvtColor(self.right, cv2.COLOR_BGR2GRAY)
+
+        r, c = self.left_gray.shape
+        # Get image coordinates by clicking
+        cv2.namedWindow('leftie')
+        cv2.namedWindow('rightie')
+        cv2.setMouseCallback('leftie', self.get_mouse_coords)
+        state = cv2.createStereoGCState(16, 5)
+
+        disparityLeft = np.zeros((r, c), np.float16)
+        disparityRight= np.zeros((r, c), np.float16)
+
+        while(1):
+            cv2.imshow('leftie', self.left)
+            cv2.imshow('rightie', self.right)
+            # Show corresponding point
+            k = cv2.waitKey(27) & 0xFF
+            if k == 27:
+                break
+
+            # Map to other image
+            #cv2.FindStereoCorrespondenceGC(self.left, self.right, disparityLeft, disparityRight, state, 0)
+            
