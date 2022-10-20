@@ -45,8 +45,8 @@ class Calibration():
             # display the image
             # TODO: Uncomment this for demo
             if show:
-                #cv2.imshow(f'{image}', filled)
-                #cv2.waitKey(500)
+                cv2.imshow(f'{image}', filled)
+                cv2.waitKey(500)
                 cv2.destroyAllWindows()
         return self.corners
 
@@ -134,52 +134,43 @@ class Projection():
         
         r = np.array(self.cal.rotVec)
         rotMat, ext = cv2.Rodrigues(r)
+        print(type(objPoints))
         imgPoints, jacobian = cv2.projectPoints(objPoints,
                                                 rotMat,
-                                                np.array(self.cal.transVec),
+                                                self.cal.transVec,
                                                 self.cal.intrMat, 
                                                 self.cal.distCoeff)
 
 class Stereo():
     def __init__(self):
-        pass
+        self.mousex = None
+        self.mousey = None
+        self.disparity = None
     def get_disparity(self, leftImg, rightImg):
+        imgL = cv2.imread('Dataset_CvDl_Hw1/Q3_Image/imL.png',0)
+        imgR = cv2.imread('Dataset_CvDl_Hw1/Q3_Image/imR.png',0)
         self.leftImg = leftImg
         self.rightImg = rightImg
-
-        focalLength = 4019.284
-        baseline = 342.789
-        # Read the images, might have to turn to greyscale
-        left = cv2.imread(leftImg, 0)
-        right = cv2.imread(rightImg, 0)
-
-        print(f' Left image shape: {left.shape}')
-
-        c, r = left.shape
-
-        #sbm = cv2.createStereoBMState()
-        stereo = cv2.StereoBM_create(numDisparities=512, blockSize=5)
-        #disparity = cv2.cv.createMat(c, r,)
-        #left = cv2.fromarray(left)
-        #right = cv2.fromarray(right)
-
-        # Get the absolute value so its positive
-        self.disparity = np.abs(stereo.compute(left, right)).astype(np.float32)
-
-        self.disparity *= (255/ (self.disparity.max() ) )
-        self.depth = focalLength * baseline / (self.disparity+.001)
-
-       
-        cv2.imshow('Hello', self.depth)
-        cv2.waitKey(0)
+        stereo = cv2.StereoBM_create(numDisparities=256, blockSize=15)
+        self.disparity = stereo.compute(imgL,imgR)
+        plt.imshow(self.disparity,'gray')
+        plt.show()
         return self.disparity
-
+ 
     def get_mouse_coords(self, event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
             cv2.circle(self.left, (x, y), 10, (255, 0, 0), 10)
             self.mousex = x
             self.mousey = y
             print(self.mousex, self.mousey)
+            dispx = self.disparity[self.mousex, self.mousey]
+            if dispx == 0:
+                return
+
+            corrx = self.mousex + 279
+            corry = self.mousey
+            cv2.circle(self.right, (corrx, corry), 20, (0, 255, 0), 20)
+
 
     def find_corresponding_point(self, ):
         self.left = cv2.imread(self.leftImg)
@@ -190,22 +181,27 @@ class Stereo():
 
         r, c = self.left_gray.shape
         # Get image coordinates by clicking
-        cv2.namedWindow('leftie')
+       
         cv2.namedWindow('rightie')
+        cv2.namedWindow('leftie')
         cv2.setMouseCallback('leftie', self.get_mouse_coords)
-        state = cv2.createStereoGCState(16, 5)
-
         disparityLeft = np.zeros((r, c), np.float16)
         disparityRight= np.zeros((r, c), np.float16)
 
         while(1):
-            cv2.imshow('leftie', self.left)
+            
             cv2.imshow('rightie', self.right)
+            cv2.imshow('leftie', self.left)
             # Show corresponding point
             k = cv2.waitKey(27) & 0xFF
             if k == 27:
                 break
 
             # Map to other image
-            #cv2.FindStereoCorrespondenceGC(self.left, self.right, disparityLeft, disparityRight, state, 0)
+            #FindStereoCorrespondenceGC(self.left, self.right, disparityLeft, disparityRight, state, 0)
+            if not self.mousex or not self.mousey:
+                continue
+            
+            #print(f'mouse x, y:{self.mousex, self.mousey}, corr:{dispx-self.mousex, dispx-self.mousey}, {dispx}')
+
             

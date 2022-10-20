@@ -158,7 +158,7 @@ class App(QDialog):
 
     def _load_image(self, left=True):
         img = QFileDialog.getOpenFileName(None, 
-            'Select an image', './', 
+            'Select an image', '.', 
             "Images (*.bmp *.png *jpg)")
         if img == None:
             print('Choose an image!')
