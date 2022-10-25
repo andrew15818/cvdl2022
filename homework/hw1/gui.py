@@ -24,6 +24,10 @@ class App(QDialog):
         self.dir_ = None
         self.leftImg = None
         self.rightImg = None
+
+        # Imgs used for feature detection
+        self.siftImage = None
+        self.matchImage = None
         
         self.intrinsic = None
         self.extrinsic_image = None
@@ -46,10 +50,17 @@ class App(QDialog):
         windowLayout.addWidget(self.calibrationBox)
         windowLayout.addWidget(self.projectionBox)
         windowLayout.addWidget(self.stereoBox)
+        windowLayout.addWidget(self.siftBox)
         self.setLayout(windowLayout)
         
         self.show()
-    
+    def make_button(self, name, layout, callback):
+        btn = QPushButton(name)
+        btn.clicked.connect(callback)
+        layout.addWidget(btn)
+
+        return btn
+
     def createHorizontalLayouts(self):
         # Upload files
         self.horizontalGroupBox = QGroupBox("Load Images")
@@ -131,15 +142,28 @@ class App(QDialog):
         self.stereoBox = QGroupBox('3. Stereo Disparity Map')
         stereoLayout = QVBoxLayout()
 
-        dispBtn = QPushButton('3.1 Stereo Disparity Map.')
-        dispBtn.clicked.connect(self.show_stereo_disparity)
-        stereoLayout.addWidget(dispBtn)
+        btn = self.make_button('3.1 Stereo Disparity Map.', stereoLayout, self.show_stereo_disparity) 
+        #stereoLayout.addWidget(dispBtn)
 
-        corrBtn = QPushButton('3.2 Show Corresponding Point')
-        corrBtn.clicked.connect(self.show_corresponding_point)
-        stereoLayout.addWidget(corrBtn)
+        btn = self.make_button('3.2 Show Corresponding Point', stereoLayout, self.show_corresponding_point)
+        #stereoLayout.addWidget(corrBtn)
 
         self.stereoBox.setLayout(stereoLayout)
+        
+        # Layout for Problem 4
+        self.siftBox = QGroupBox('4. SIFT')
+        siftLayout = QVBoxLayout()
+
+        btn = self.make_button('Load Image 1', siftLayout, self.load_sift_image)
+        #siftLayout.addWidget(btn)
+
+        btn = self.make_button('Load Image 2', siftLayout, self.load_match_image)
+        #siftLayout.addWidget(btn)
+
+        btn = self.make_button('4.1 Keypoints', siftLayout, self.find_keypoints)
+        #siftLayout.addWidget(btn)
+        
+        self.siftBox.setLayout(siftLayout)
 
     def set_extrinsic_image(self, i):
         self.extrinsic_image = i + 1
@@ -237,7 +261,24 @@ class App(QDialog):
             print('Come back with the images.')
             return
         self.stereo.find_corresponding_point() 
+
+    @pyqtSlot()
+    def find_keypoints(self):
+        if not self.siftImage:
+            print('Please choose first!')
+            return
         
+        
+    # image for which we find the features, then match 
+    @pyqtSlot()
+    def load_sift_image(self):
+        self.siftImage = self._load_image()        
+        print(f'loaded {self.siftImage}')
+    
+    @pyqtSlot()
+    def load_match_image(self):
+        self.matchImage = self._load_image()
+        print(f'loaded {self.matchImage}')
 
 
      

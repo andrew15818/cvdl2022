@@ -205,3 +205,10 @@ class Stereo():
             #print(f'mouse x, y:{self.mousex, self.mousey}, corr:{dispx-self.mousex, dispx-self.mousey}, {dispx}')
 
             
+class Features():
+    def __init__(self):
+        self.sift = cv2.SIFT_create()
+
+    # Find and show the features for single image
+    def find_image_features(self, path):
+        pass
