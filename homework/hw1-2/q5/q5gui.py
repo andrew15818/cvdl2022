@@ -1,6 +1,6 @@
 import sys
 import q5 # Is this file necessary?
-from train import Pipeline
+from PyQt5.QtGui import QPixmap
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import (
     QApplication,
@@ -20,9 +20,13 @@ class App(QDialog):
         self.right = 500
         self.top = 500
         self.width = 500
+        # Path for inference image
+        self.imgPath = None
+        self.pic = QPixmap()
 
-        self.initUI()
         self.model = q5.ModelInterface()
+        self.initUI()
+
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -32,6 +36,7 @@ class App(QDialog):
         
         windowLayout = QHBoxLayout()
         windowLayout.addWidget(self.modelBox)
+        windowLayout.addWidget(self.picBox)
         self.setLayout(windowLayout)
         
         self.show()
@@ -46,7 +51,9 @@ class App(QDialog):
     def createLayout(self):
         self.modelBox = QGroupBox('5. VGG19 Test')
         layout = QVBoxLayout()
-
+        self.make_button('Load Image',
+                         layout,
+                         self.load_image)
         self.make_button('5.1 Show Training Images', 
                          layout, 
                          self.show_image_grid)
@@ -67,10 +74,28 @@ class App(QDialog):
                          layout,
                          self.inference)
         self.modelBox.setLayout(layout) 
+        
+        self.picBox = QGroupBox('Image')
+        picLayout = QVBoxLayout()
+        self.label = QtWidgets.QLabel(self)
+        picLayout.addWidget(self.label)
+        
+        self.picBox.setLayout(picLayout)
+
+    def load_image(self):
+        self.imgPath = QFileDialog.getOpenFileName(None,
+                                                   'Select inference image', '.'
+                                                   'Images (*.bmp *.png *.jpg)'
+                                                    )
+        print(f'loaded {self.imgPath}')
+        self.p = QPixmap(self.imgPath[0])
+        self.label.setPixmap(self.p)
 
     def show_image_grid(self):
+        self.model.show_image_grid()
         pass
     def show_model_structure(self):
+        self.model.summary()
         pass
     def show_data_augmentation(self):
         pass
