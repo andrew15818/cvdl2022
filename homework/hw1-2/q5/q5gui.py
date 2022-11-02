@@ -77,7 +77,11 @@ class App(QDialog):
         
         self.picBox = QGroupBox('Image')
         picLayout = QVBoxLayout()
+
         self.label = QtWidgets.QLabel(self)
+        self.resultsLabel = QtWidgets.QLabel(self)
+        
+        picLayout.addWidget(self.resultsLabel)
         picLayout.addWidget(self.label)
         
         self.picBox.setLayout(picLayout)
@@ -111,7 +115,8 @@ class App(QDialog):
         if not self.imgPath:
             print('Have to set load an image first!')
             return
-        result = self.model.inference(self.imgPath)
+        label, conf = self.model.inference(self.imgPath)
+        self.resultsLabel.setText(f'Class: {label} Confidence: {conf}')
 
 app = QApplication(sys.argv)
 gui = App()

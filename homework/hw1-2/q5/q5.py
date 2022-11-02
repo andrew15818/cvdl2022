@@ -108,7 +108,6 @@ class ModelInterface():
         result = None
         img = io.read_image(imagePath).float()
         img = self.infAugs(img)
-        print(self.model)
         self.model.eval()
         pred = self._run_model(img)
         
