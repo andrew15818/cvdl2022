@@ -87,8 +87,9 @@ class App(QDialog):
                                                    'Select inference image', '.'
                                                    'Images (*.bmp *.png *.jpg)'
                                                     )
+        self.imgPath = self.imgPath[0]
         print(f'loaded {self.imgPath}')
-        self.p = QPixmap(self.imgPath[0])
+        self.p = QPixmap(self.imgPath)
         self.label.setPixmap(self.p)
 
     def show_image_grid(self):
@@ -98,11 +99,19 @@ class App(QDialog):
         self.model.summary()
         pass
     def show_data_augmentation(self):
-        pass
+        if not self.imgPath:
+            print('Have to set load an image first!')
+            return
+
+        self.model.show_data_augmentation(self.imgPath)
+
     def show_accuracy_loss(self):
-        pass
+        self.model.show_accuracy_loss()
     def inference(self):
-        pass
+        if not self.imgPath:
+            print('Have to set load an image first!')
+            return
+        result = self.model.inference(self.imgPath)
 
 app = QApplication(sys.argv)
 gui = App()
