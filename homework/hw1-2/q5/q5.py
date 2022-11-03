@@ -26,7 +26,7 @@ classes = {
 
 class ModelInterface():
     # Set the path for CIFAR-10
-    def __init__(self, root='/home/poncedeleon/usb/'):
+    def __init__(self, root='.'):
         # Load pretrained models onto CPU
         state = torch.load('vgg19_full.pt', 
                                 map_location=torch.device('cpu'))
@@ -51,7 +51,7 @@ class ModelInterface():
         self.accPath = 'acc.png'
         self.lossPath = 'loss.png'
 
-        self.dataset = datasets.CIFAR10(root, download=False, train=True)
+        self.dataset = datasets.CIFAR10(root, download=True, train=True)
 
     def summary(self):
         torchsummary.summary(self.model, (3, 224, 224))
@@ -74,16 +74,22 @@ class ModelInterface():
     def show_data_augmentation(self, path):
         orig_img = plt.imread(path)
         orig_img = T.ToTensor()(orig_img)
-        orig_img = orig_img.squeeze().permute(1, 2, 0)
-         
-        aug1 = T.RandomHorizontalFlip(p=1)(orig_img)
-        aug2 = T.RandomRotation(degrees=10)(orig_img)
-        aug3 = T.GaussianBlur(kernel_size=3)(orig_img)
+        orig_img_perm = orig_img.squeeze().permute(1, 2, 0)
+        print(orig_img.shape) 
+
+        aug1 = T.RandomHorizontalFlip(p=1)(orig_img_perm)
+        aug2 = T.RandomResizedCrop(size=(64,64))(orig_img)
+        aug3 = T.GaussianBlur(kernel_size=3)(orig_img_perm)
 
         fig, axis = plt.subplots(nrows=1, ncols=3)
         axis[0].imshow(aug1)
-        axis[1].imshow(aug2)
+        axis[0].set_title('Random Horizontal Flip')
+
+        axis[1].imshow(aug2.squeeze().permute(1,2,0))
+        axis[1].set_title('Random Resize 64x64')
+
         axis[2].imshow(aug3)
+        axis[2].set_title('Gaussian Blur')
         plt.show()
 
     # Show plot with both images
@@ -93,7 +99,10 @@ class ModelInterface():
         im2 = plt.imread(self.lossPath)
 
         axis[0].imshow(im1)
+        axis[0].axis('off')
+
         axis[1].imshow(im2)
+        axis[1].axis('off') 
         plt.show()
 
     def _run_model(self, img):
