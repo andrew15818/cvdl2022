@@ -22,6 +22,8 @@ class App(QDialog):
         self._initUI()
 
         self.videoPath = None
+        self.img1Path = None
+        self.img2Path = None
 
     # Create all the buttons and input fields
     def _initUI(self):
@@ -35,6 +37,7 @@ class App(QDialog):
         self.setLayout(windowLayout)
         windowLayout.addWidget(self.horizontalGroupBox)
         windowLayout.addWidget(self.q1GroupBox)
+        windowLayout.addWidget(self.q2GroupBox)
         self.show()
 
     def makeButton(self, name, layout, callback):
@@ -53,15 +56,21 @@ class App(QDialog):
         img1btn = self.makeButton('Load image 1', mediaLayout, self.loadImage1)
         img2btn = self.makeButton('Load image 2', mediaLayout, self.loadImage2)
 
-        self.q1GroupBox = QGroupBox('Background subtraction')
+        self.q1GroupBox = QGroupBox('1. Background subtraction')
         subLayout = QVBoxLayout()
 
         backsubBtn = self.makeButton('1.1 Background subtraction', subLayout, self.backgroundSubtraction)
+        
+        self.q2GroupBox = QGroupBox('2. Perspective Transform')
+        transLayout = QVBoxLayout()
 
+        perspBtn = self.makeButton('2.1 Perspective Transform', transLayout, self.perspectiveTransform)
 
 
         self.horizontalGroupBox.setLayout(mediaLayout)
         self.q1GroupBox.setLayout(subLayout)
+        self.q2GroupBox.setLayout(transLayout)
+
     def _load_media(self):
         img = QFileDialog.getOpenFileName(None,
                                           'Select an image or video', '.',
@@ -76,16 +85,28 @@ class App(QDialog):
         self.videoPath = file
         print(f'Loaded {self.videoPath}')
 
+    def _load_image(self, img1=True):
+        img = QFileDialog.getOpenFileName(None,
+                            'Select an image', '.',
+                            "Images (*.mp4 *.bmp *.png *jpg)")
+        if img == None:
+            print("Choose an image!")
+        print(f'Loaded {img[0]}')
+        return img[0] 
+    
     def loadImage1(self):
-        pass
+        self.img1Path = self._load_image()
+
     def loadImage2(self):
-        pass
+        self.img2Path = self._load_image()
 
     def backgroundSubtraction(self):
         if not self.videoPath:
             print('Select video file first')
             return
         methods.subtractBackground(self.videoPath)
+
+    def perspectiveTransform(self):
         pass
         
 if __name__=='__main__':
