@@ -38,6 +38,7 @@ class App(QDialog):
         windowLayout.addWidget(self.horizontalGroupBox)
         windowLayout.addWidget(self.q1GroupBox)
         windowLayout.addWidget(self.q2GroupBox)
+        windowLayout.addWidget(self.q3GroupBox)
         self.show()
 
     def makeButton(self, name, layout, callback):
@@ -61,15 +62,22 @@ class App(QDialog):
 
         backsubBtn = self.makeButton('1.1 Background subtraction', subLayout, self.backgroundSubtraction)
         
-        self.q2GroupBox = QGroupBox('2. Perspective Transform')
+        self.q2GroupBox = QGroupBox('2. Optical Flow')
         transLayout = QVBoxLayout()
 
-        perspBtn = self.makeButton('2.1 Perspective Transform', transLayout, self.perspectiveTransform)
+        self.makeButton('2.1 Detect Points in First Frame', transLayout, self.detectInitialPoints)
+        self.makeButton('2.2 Optical Flow', transLayout, self.opticalFlow)
 
+        self.q3GroupBox = QGroupBox('3. Perspective Transform')
+        perspLayout = QVBoxLayout()
+
+        self.makeButton('3.1 Perspective Transform', perspLayout, self.perspectiveTransform)
 
         self.horizontalGroupBox.setLayout(mediaLayout)
+
         self.q1GroupBox.setLayout(subLayout)
         self.q2GroupBox.setLayout(transLayout)
+        self.q3GroupBox.setLayout(perspLayout)
 
     def _load_media(self):
         img = QFileDialog.getOpenFileName(None,
@@ -106,9 +114,18 @@ class App(QDialog):
             return
         methods.subtractBackground(self.videoPath)
 
+    def detectInitialPoints(self):
+        if not self.videoPath:
+            print('Select video file first')
+            return
+        methods.detectFirstFrame(self.videoPath)
+    def opticalFlow(self):
+        if not self.videoPath:
+            print('Select video file first')
+            return
+        methods.opticalFlow(self.videoPath)
     def perspectiveTransform(self):
         pass
-        
 if __name__=='__main__':
     app = QApplication(sys.argv)
     gui = App()
