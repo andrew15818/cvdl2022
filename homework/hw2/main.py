@@ -125,7 +125,10 @@ class App(QDialog):
             return
         methods.opticalFlow(self.videoPath)
     def perspectiveTransform(self):
-        pass
+        if not (self.img1Path or self.videoPath):
+            print('Choose both an image and video!')
+            return
+        methods.perspectiveTransform(self.videoPath, self.img1Path)
 if __name__=='__main__':
     app = QApplication(sys.argv)
     gui = App()

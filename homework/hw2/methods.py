@@ -2,35 +2,31 @@ import cv2
 import numpy as np
 
 # Return the mean, stddev matrices for first 25 frames
-def buildGaussianModel(videoPath, frames=25):
+def buildGaussianModel(videoPath, frameCount=25):
     cap = cv2.VideoCapture(videoPath, cv2.CAP_FFMPEG)
-    ret, frame = cap.read()
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    h, w = gray.shape
+    frames = []
 
-    volume = np.zeros((frames, h, w))
-    volume[0] = gray
-    i = 1
-    while cap.isOpened() and i < frames:
+    i = 0
+    while cap.isOpened() and i < frameCount:
         ret, frame = cap.read()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        volume[i] = gray 
+        if not ret:
+            print('Failed to read frame for Gaussian model.')
+            return 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frames.append(frame)
         i += 1
-    
-    # Compute Gaussian parameters across each pixel location
-    means = np.mean(volume, axis=0)
-    devs = np.std(volume, axis=0)
+        
+    frames = np.array(frames)
+    means = np.mean(frames, axis=0)
+    devs = np.std(frames, axis=0)
     devs[devs < 5] = 5
-
-    cap.release()
-    return means.astype('uint8'), devs.astype('uint8')
+    return means, devs
 
 def _get_mask(gray, means, stddevs, mult=5):
-    mask = np.zeros(gray.shape)
     excess = np.abs(gray - means)
     
-    mask = np.zeros(gray.shape)
-    mask[excess > (mult*stddevs)] = 1
+    mask = np.zeros_like(gray)
+    mask[excess > (mult*stddevs)] = 255
     return mask.astype('uint8')
 
 # Use the first 24 frames to build Gaussian model with mean , stddev
@@ -42,10 +38,8 @@ def subtractBackground(videoPath):
     means, stddevs = buildGaussianModel(videoPath)
     
     cap = cv2.VideoCapture(videoPath)
-    cv2.namedWindow('frame', cv2.WINDOW_AUTOSIZE)
-    cv2.namedWindow('mask', cv2.WINDOW_AUTOSIZE)
-    #cv2.namedWindow('cutout', cv2.WINDOW_AUTOSIZE)
     i = 0
+   
     while cap.isOpened():
         # Skip frames we saw already
         if i < 24:
@@ -55,19 +49,17 @@ def subtractBackground(videoPath):
 
         if not ret:
             break
-
+        masked = np.zeros_like(frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         mask = _get_mask(gray, means, stddevs)
+        print(means[100:, 100:], stddevs[100:, 100:])
+        for i in range(3):
+            masked[:,:,i] = mask
 
-        outFrame = np.ones(shape=gray.shape)
-        outFrame = cv2.bitwise_and(gray, mask)
-
-        noBack = np.zeros(frame.shape)
-        #noBack = np.where(mask==1, frame, 0)
-        print(noBack.shape, frame.shape)
-        cv2.imshow('frame', frame)
-        #cv2.imshow('cutout', noBack)
-        cv2.imshow('mask', outFrame*255)
+        outFrame = np.ones(shape=gray.shape).astype('uint8')
+        outFrame = cv2.bitwise_and(frame, frame, mask= mask)
+        out = cv2.hconcat([frame, masked, outFrame])
+        cv2.imshow('out', out)
         cv2.waitKey(50)
     cap.release()
 
@@ -121,8 +113,8 @@ def opticalFlow(videoPath):
     ret, old_frame = cap.read()
     old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
     keypoints = detectFirstFrame(videoPath, showImage=False)
-    #p0 = np.array([[kp.pt[0], kp.pt[1]] for kp in keypoints])
-    p0 = cv2.goodFeaturesToTrack(old_gray, mask=None, **feature_params)
+    p0 = np.array([[kp.pt[0], kp.pt[1]] for kp in keypoints])
+    #p0 = cv2.goodFeaturesToTrack(old_gray, mask=None, **feature_params)
     if not ret:
         print('Did not capture first frame!')
         return
@@ -156,4 +148,39 @@ def opticalFlow(videoPath):
 
         old_gray = frame_gray.copy()
         p0 = good_new.reshape(-1, 1, 2)
+    cap.release()
+
+def perspectiveTransform(videoPath, imgPath):
+    cap = cv2.VideoCapture(videoPath)
+    # dict of aruco shapes and params
+    arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
+    arucoParams = cv2.aruco.DetectorParameters_create()
+    dstImg = cv2.imread(imgPath)
+    h, w, d = dstImg.shape
+    dstPts = np.array([[0, 0],
+                       [h-1, 0],
+                       [0, w-1],
+                       [h-1, w-1],
+                ])
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        cv2.imshow('frame', frame)
+        
+        (corners, ids, rejected) = cv2.aruco.detectMarkers(frame, arucoDict,
+                                                           parameters=arucoParams
+                                                           ) 
+        print(f'corners: {corners}, ids: {ids}, rejected: {rejected}')
+        centers = np.zeros((4, 2)).astype('float32')
+        if  len(corners) != 4:
+            continue
+        # What is the role of ids array?
+        # Corners gives us the 4 points of the aruco, so get the center
+        for i, corner in enumerate(corners):
+            centers[i] = corners[ids[i]][0][0]#np.mean(corner, axis=1)
+        H, mask = cv2.findHomography(centers, dstPts, cv2.RANSAC, 5.0)
+        #H = cv2.getPerspectiveTransform(dstPts, centers)
+        warped = cv2.warpPerspective(dstImg, H, (h, w))
+        cv2.imshow('warpie', warped)
+        cv2.waitKey(50)
     cap.release()
