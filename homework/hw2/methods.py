@@ -157,7 +157,7 @@ def perspectiveTransform(videoPath, imgPath):
     arucoParams = cv2.aruco.DetectorParameters_create()
     dstImg = cv2.imread(imgPath)
     h, w, d = dstImg.shape
-    dstPts = np.array([[0, 0],
+    dstPts = np.float32([[0, 0],
                        [h-1, 0],
                        [0, w-1],
                        [h-1, w-1],
@@ -176,11 +176,19 @@ def perspectiveTransform(videoPath, imgPath):
             continue
         # What is the role of ids array?
         # Corners gives us the 4 points of the aruco, so get the center
-        for i, corner in enumerate(corners):
-            centers[i] = corners[ids[i]][0][0]#np.mean(corner, axis=1)
-        H, mask = cv2.findHomography(centers, dstPts, cv2.RANSAC, 5.0)
-        #H = cv2.getPerspectiveTransform(dstPts, centers)
+        #for i, corner in enumerate(corners):
+        #    centers[i] = corners[i][0][0]
+        for i, id in enumerate(ids):
+            centers[i] = corners[ids[i][0]-1][0][0]
+        
+        #H, mask = cv2.findHomography(centers, dstPts, cv2.RANSAC, 5.0)
+        H = cv2.getPerspectiveTransform(dstPts, centers)
+        print(f'{dstPts.shape},{centers.shape} {H}')
+
         warped = cv2.warpPerspective(dstImg, H, (h, w))
+        wh,ww, wd = warped.shape
+        #warped = cv2.perspectiveTransform(dstPts, H) 
+        #out = np.vstack([frame, warped])
         cv2.imshow('warpie', warped)
         cv2.waitKey(50)
     cap.release()

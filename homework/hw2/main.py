@@ -73,6 +73,11 @@ class App(QDialog):
 
         self.makeButton('3.1 Perspective Transform', perspLayout, self.perspectiveTransform)
 
+        self.q4GroupBox = QGroupBox('3. Perspective Transform')
+        pcaLayout = QVBoxLayout()
+
+        self.makeButton('4.1 Image Reconstruction', pcaLayout, self.imageReconstruction)
+
         self.horizontalGroupBox.setLayout(mediaLayout)
 
         self.q1GroupBox.setLayout(subLayout)
@@ -129,6 +134,18 @@ class App(QDialog):
             print('Choose both an image and video!')
             return
         methods.perspectiveTransform(self.videoPath, self.img1Path)
+    def load_folder(self):
+        self.dir_ = QFileDialog.getExistingDirectory(None, 'Select a directory', './', 
+                                                     QFileDialog.ShowDirsOnly)
+        if self.dir_ == '':
+            print('Choose a directory before advancing!')
+            return
+
+    def imageReconstruction(self):
+        self.load_folder()
+        print(f'loaded {self.dir}')
+        pass
+        
 if __name__=='__main__':
     app = QApplication(sys.argv)
     gui = App()
