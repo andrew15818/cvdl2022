@@ -1,4 +1,6 @@
 import cv2
+import os
+import sklearn.decomposition as dec
 import numpy as np
 
 # Return the mean, stddev matrices for first 25 frames
@@ -105,16 +107,17 @@ def opticalFlow(videoPath):
 
     feature_params =  dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
     # Get the initial coordinates of points
-    #keypoints = detectFirstFrame(videoPath, showImage=False)
-    #keypoints = np.array([[kp.pt[0], kp.pt[1]] for kp in keypoints])
    
     cap = cv2.VideoCapture(videoPath)
 
     ret, old_frame = cap.read()
     old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
+
     keypoints = detectFirstFrame(videoPath, showImage=False)
-    p0 = np.array([[kp.pt[0], kp.pt[1]] for kp in keypoints])
+    p0 = np.array([[kp.pt[0], kp.pt[1]] for kp in keypoints]).astype('float32')
+    p0 = np.expand_dims(p0, axis=1)
     #p0 = cv2.goodFeaturesToTrack(old_gray, mask=None, **feature_params)
+
     if not ret:
         print('Did not capture first frame!')
         return
@@ -123,7 +126,7 @@ def opticalFlow(videoPath):
     while cap.isOpened():
         ret, frame = cap.read()
         cv2.imshow('hello', frame)
-        cv2.waitKey(50)
+        cv2.waitKey(40)
         if not ret:
             print('Did not capture image!')
             return
@@ -132,6 +135,7 @@ def opticalFlow(videoPath):
         # Calculate the optical flow
         p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, 
                                                p0, None, **params)
+        
         # Use only the good points
         if p1 is not None:
             good_new = p1[st == 1]
@@ -157,38 +161,131 @@ def perspectiveTransform(videoPath, imgPath):
     arucoParams = cv2.aruco.DetectorParameters_create()
     dstImg = cv2.imread(imgPath)
     h, w, d = dstImg.shape
-    dstPts = np.float32([[0, 0],
-                       [h-1, 0],
-                       [0, w-1],
-                       [h-1, w-1],
+    pts_src = np.float32([[0, 0],
+                       [w, 0],
+                       [w, h],
+                        [0, h],
                 ])
 
     while cap.isOpened():
         ret, frame = cap.read()
-        cv2.imshow('frame', frame)
         
         (corners, ids, rejected) = cv2.aruco.detectMarkers(frame, arucoDict,
                                                            parameters=arucoParams
                                                            ) 
-        print(f'corners: {corners}, ids: {ids}, rejected: {rejected}')
+        #print(f'corners: {corners}, ids: {ids}')
         centers = np.zeros((4, 2)).astype('float32')
-        if  len(corners) != 4:
+        if ids is None:
+            print('No ids found:\'(')
             continue
         # What is the role of ids array?
         # Corners gives us the 4 points of the aruco, so get the center
         #for i, corner in enumerate(corners):
         #    centers[i] = corners[i][0][0]
-        for i, id in enumerate(ids):
-            centers[i] = corners[ids[i][0]-1][0][0]
-        
-        #H, mask = cv2.findHomography(centers, dstPts, cv2.RANSAC, 5.0)
-        H = cv2.getPerspectiveTransform(dstPts, centers)
-        print(f'{dstPts.shape},{centers.shape} {H}')
+        # Get the coordinates of each point, since they may be detected in different order 
+        # And the corresponding point on the target image
+        i1 = np.squeeze(np.where(ids == 1))
+        rpt1 = np.squeeze(corners[i1[0]])[1]
 
-        warped = cv2.warpPerspective(dstImg, H, (h, w))
-        wh,ww, wd = warped.shape
-        #warped = cv2.perspectiveTransform(dstPts, H) 
-        #out = np.vstack([frame, warped])
-        cv2.imshow('warpie', warped)
-        cv2.waitKey(50)
+        i2 = np.squeeze(np.where(ids == 2))
+        rpt2 = np.squeeze(corners[i2[0]])[2]
+
+        distance = np.linalg.norm(rpt1 - rpt2)
+
+        scaling = 0.02
+        pts_dst = [
+                [rpt1[0] - round(scaling * distance), rpt1[1] - round(scaling * distance)]
+                ]
+        pts_dst = pts_dst + \
+                [[rpt2[0] - round(scaling * distance), rpt2[1] - round(scaling * distance)]]
+
+
+        i3 = np.squeeze(np.where(ids == 3))
+        rpt3 = np.squeeze(corners[i3[0]])[0]
+
+        i4 = np.squeeze(np.where(ids == 4))
+        rpt4 = np.squeeze(corners[i4[0]])[0]
+        
+        pts_dst = pts_dst + \
+                [[rpt3[0] - round(scaling * distance), rpt3[1] - round(scaling * distance)]]
+
+        pts_dst = pts_dst + \
+                [[rpt4[0] - round(scaling * distance), rpt4[1] - round(scaling * distance)]]
+        
+        pts_dst = np.asarray(pts_dst)
+        H, mask = cv2.findHomography(pts_src, pts_dst, cv2.RANSAC, 5.0)
+        #H = cv2.getPerspectiveTransform(dstPts, pts_dst)
+
+        warped = cv2.warpPerspective(dstImg, H, (frame.shape[1], frame.shape[0] ))
+        
+        # Create the mask on the original frame where warped image is placed
+        mask = np.zeros([frame.shape[0], frame.shape[1]], dtype=np.uint8)
+        cv2.fillConvexPoly(mask, np.int32([pts_dst]), (255, 255, 255), cv2.LINE_AA)
+
+        element = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        mask = cv2.erode(mask, element, iterations=3)
+
+        warped = warped.astype(float)
+        mask3 = np.zeros_like(warped)
+
+        print(mask.shape, mask3.shape)
+        for  i in range(3):
+            mask3[:,:,i] = mask /255
+        cv2.imshow('warped', warped) 
+        warped_mask = cv2.multiply(warped, mask3)
+        masked_frame = cv2.multiply(frame.astype(float), 1-mask3)
+
+        out = cv2.add(warped_mask, masked_frame)
+        cv2.imshow('hola', out/255)
+        cv2.waitKey(30)
+        
     cap.release()
+
+# Use Principal Component Analysis for dimensionality reduction,
+# then reconstruct the original input and measure the error
+def imageReconstruction(imgPath, components=250):
+    pca = dec.PCA(n_components=components)
+    losses = []
+    for filename in os.listdir(imgPath):
+        try:
+            img = cv2.imread(os.path.join(imgPath,filename))
+            
+        except: 
+            print(f"Could not read {os.path.join(imgPath, filename)}")
+            continue
+        
+        # Main idea is to perform PCA on each channel separately,
+        # then merge for the final image.
+        b, g, r = cv2.split(img)
+
+        pca_b = dec.PCA(n_components=components)
+        pca_b.fit(b)
+        trans_b = pca_b.transform(b)
+
+
+        pca_g = dec.PCA(n_components=components)
+        pca_g.fit(g)
+        trans_g = pca_b.transform(g)
+
+        pca_r = dec.PCA(n_components=components)
+        pca_r.fit(r)
+        trans_r = pca_b.transform(r)
+
+        #print(f'Blue channel variance: {sum(pca_b.explained_variance_ratio_)}')
+        #print(f'Green channel variance: {sum(pca_g.explained_variance_ratio_)}')
+        #print(f'Red channel variance: {sum(pca_r.explained_variance_ratio_)}')
+
+
+        # Reconstruct the original image
+        b_rec = pca_b.inverse_transform(trans_b)
+        g_rec = pca_g.inverse_transform(trans_g)
+        r_rec = pca_r.inverse_transform(trans_r)
+
+        rec = cv2.merge((b_rec, g_rec, r_rec)).astype('uint8')
+        out = cv2.hconcat([img, rec])
+
+        loss = np.sum((img - rec) ** 2, axis=1).mean()
+        losses.append(loss)
+        cv2.imshow('final', out)
+        cv2.waitKey(50)
+    print(losses)

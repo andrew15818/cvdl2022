@@ -39,6 +39,7 @@ class App(QDialog):
         windowLayout.addWidget(self.q1GroupBox)
         windowLayout.addWidget(self.q2GroupBox)
         windowLayout.addWidget(self.q3GroupBox)
+        windowLayout.addWidget(self.q4GroupBox)
         self.show()
 
     def makeButton(self, name, layout, callback):
@@ -83,6 +84,7 @@ class App(QDialog):
         self.q1GroupBox.setLayout(subLayout)
         self.q2GroupBox.setLayout(transLayout)
         self.q3GroupBox.setLayout(perspLayout)
+        self.q4GroupBox.setLayout(pcaLayout)
 
     def _load_media(self):
         img = QFileDialog.getOpenFileName(None,
@@ -140,11 +142,12 @@ class App(QDialog):
         if self.dir_ == '':
             print('Choose a directory before advancing!')
             return
+        print(f'loaded {self.dir_}')
 
     def imageReconstruction(self):
         self.load_folder()
-        print(f'loaded {self.dir}')
-        pass
+        methods.imageReconstruction(self.dir_)
+       
         
 if __name__=='__main__':
     app = QApplication(sys.argv)
