@@ -19,9 +19,11 @@ The matched features look like this:
 a video by first capturing interesting keypoints.
 
 - Background removal 
+
 ![Background removal](./imgs/background_subtract.gif)
 
 - Optical Flow
+
 ![Optical Flow](./imgs/optical_flow.gif)
 
 4. **Homework 2.5**: The final assignment required training a ResNet CNN on the cats and dogs dataset,
